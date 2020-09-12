@@ -1,2 +1,0 @@
-Repulsion between hubs algorithm: https://math.bme.hu/~molontay/Msc_MolontayR.pdf
-
