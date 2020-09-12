@@ -1,2 +1,2 @@
-- A few modules from the scipy library, I recommend you download the full library (link: https://www.scipy.org/install.html);
-- Networkx (if debian distribution of linux, open terminal and use pip3 install networkx).
+Scipy (link: https://www.scipy.org/install.html)-I recommend you download the full library, although I've only used a few modules;
+Networkx (if debian distribution of linux, open terminal and use pip3 install networkx).
