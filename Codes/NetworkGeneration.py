@@ -15,10 +15,11 @@ def hubs_generate(p,m,N, draw=False, save=False):
     one of the references, it is based on the principle of repulsion between hubs.
     p is the probability factor (0<p<1), m is a variable associated with the 
     algorithm and N is the number of interations (recommended 0<N<4). If draw is
-    set to True by the user, the function will print the network.
+    set to True by the user, the function will print the network. If save is set
+    to True by the user, it saves a .png image of the network.
     '''
     
-    if save==True: #if save is true and draw is false, problems would happen bellow
+    if save==True: #if save is true and draw is false, problems would happen
         draw=True
     
     #starting network (3-edged star):
@@ -28,19 +29,27 @@ def hubs_generate(p,m,N, draw=False, save=False):
     nk.add_edge(1,2)
     nk.add_edge(1,3)
     nk.add_edge(1,4)
-    nk.add_edge(1,5)
 
-    c=1 #contador
+    c=1 #counter
 
-    for i in range(N):
+    for i in range(N): #starts the generation: N iterations
         #first step
-        old_edges=list(nk.edges)
-        old_nodes=list(nk.nodes)
-        new_nodes=[]
+        old_edges=list(nk.edges) #list of edges before the iteration is done
+        old_nodes=list(nk.nodes) #list of nodes before the iteration is done
+        new_nodes=[] #list of nodes being created during the iteration
+        
+        '''
+        The first loop will be the first part of the algorithm: simply creating
+        new nodes connected to the old nodes according to the parameters. The 
+        second loop will be the random part of the algorithm: determines
+        randomly some nodes to disconnect and creates new connections according 
+        to the algorithm.
+        '''
+        
         for node in old_nodes:
             for j in range(m*nk.degree(node)):
-                nk.add_edge(node, 6+c)
-                new_nodes.append(6+c)
+                nk.add_edge(node, 5+c)
+                new_nodes.append(5+c)
                 c+=1
     
         for edge in old_edges:
@@ -56,5 +65,7 @@ def hubs_generate(p,m,N, draw=False, save=False):
     if save==True:
         plt.savefig('my_network.png')
 
+#the following lines are meant to test this module
+
 if __name__=='__main__':
-    hubs_generate(0.7,3,2,True, True)
+    hubs_generate(0.7,3,2,True)
