@@ -9,7 +9,7 @@ import random
 import networkx as nx
 import matplotlib.pyplot as plt
 
-def hubs_generate(p,m,N, draw=False, save=False): 
+def hubs_generate(p=0.7,m=3,N=2, draw=False, save=False): 
     '''
     This function generates a fractal network using an algorithm presented in
     one of the references, it is based on the principle of repulsion between hubs.
