@@ -48,8 +48,8 @@ def hubs_generate(p=0.7,m=3,N=2, draw=False, save=False):
         
         for node in old_nodes:
             for j in range(m*nk.degree(node)):
-                nk.add_edge(node, 5+c)
-                new_nodes.append(5+c)
+                nk.add_edge(node, 4+c)
+                new_nodes.append(4+c)
                 c+=1
     
         for edge in old_edges:
@@ -64,6 +64,8 @@ def hubs_generate(p=0.7,m=3,N=2, draw=False, save=False):
         
     if save==True:
         plt.savefig('my_network.png')
+        
+    return nk
 
 #the following lines are meant to test this module
 

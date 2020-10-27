@@ -21,11 +21,10 @@ from matplotlib import pyplot as plt
 import random
 from NetworkGeneration import hubs_generate
 
-#-----------------------------------------------------------------------------#
+#--------------------------------------------------------------------------
                 
-def travel_prob(a=2.2, d): #probability of someone traveling to a city at distance 
-                           #d of them, a is just a constant.
-    
+def travel_prob(d, a=2.2): #probability of someone traveling to a city at distance 
+                           #d of them, a is just a constant.    
     return np.exp(-a*d)
 
 def NumberofNeighbors(graph, node_label):
@@ -79,13 +78,12 @@ class Person():
         if self.infected==True: 
             self.days_infected+=1
         
-        if self.days_out_home==avg_time_trip: #if they spend a lot of time out of their home city
+        if self.days_out_home==5: #if they spend a lot of time out of their home city
             self.travel(self.home_city) #they go back home
         
         if self.current_city!=self.home_city:
             self.days_out_home+=1
             
-
 class City():
     '''
     This class is directed at objects meant to represent cities in a network of
@@ -93,7 +91,7 @@ class City():
     and an int that represents the population of the city (population).
     '''
     
-    def __init__(self, node, populationm, label):
+    def __init__(self, node, population, label):
         
         self.label=label
         self.node=node
@@ -103,15 +101,9 @@ class City():
         #self.people_in stores the people in the city at a given moment, including
         #travelers and excluding people that traveled from the city
         
-        infected=0
+        self.infected=0
         
-        for person in self.citizens:
-            if person>0:
-                infected+=1
-                
-        self.infected=infected
-        
-    def Internal_infection(self):
+    def Internal_infection(self, avg_contact, infection_prob):
         
         for person in self.people_in: #for each citizen
             if person.infected==True: #the infected ones will test to see if they will infect someone
@@ -120,62 +112,135 @@ class City():
                     if self.people_in[contact].susceptible==True and random.random()<=infection_prob:
                         
                         self.people_in[contact].get_infected() #there is a random chance of that contact becoming infected
-
-#-----------------------------------------------------------------------------#
-
-def Simulation(no_days=30, infection_prob=0.3, avg_contact=8, avg_time_trip=4):
-        '''
-        This will make the job of the main function for the simulation. All the 
-        parameters have a standard value, but you can change them: no_days says
-        the number of days of simulation; infection_prob is the probability with
-        which a susceptible person, if in contact with an infected person, gets
-        infected; avg_contact is the number of contacts a person has during one
-        day and avg_time_trip is the limit to which a person can spend outside
-        of their home city.
-        '''
+                        
+    def update_infected(self):
         
-        city_network=hubs_generate(draw=True)
-        nodes_list=list(city_network.nodes)
+        self.infected=0
         
-        #The population of each city will be proportional to the number of connections of the city
-        #The four starting cities will be created separately        
-        center=City(nodes_list[0], 2000*NumberofNeighbors(city_network, 1),1)
-        subcenter1=City(nodes_list[1], 2000*NumberofNeighbors(city_network, 2), 11)
-        subcenter2=City(nodes_list[2], 2000*NumberofNeighbors(city_network, 3), 12)
-        subcenter3=City(nodes_list[3], 2000*NumberofNeighbors(city_network, 4), 13)
-        cities_list=[center, subcenter1, subcenter2, subcenter3]
-        
-        for i in range(4, city_network.number_of_nodes()):
-            new_city=City(nodes_list[i], 2000*NumberofNeighbors(city_network, i+1), 100+i)
-            cities_list.append(new_city)
-            
-        distances=nx.all_pairs_shortest_path_length(city_network)
-        #dict of the distances between nodes. distances[n1][n2] gives the distance
-        #between nodes n1 and n2.
-            
-        for day in range(no_days):
-            
-            for city in cities_list:
-                city.Internal_infection() #processes the internal infection before trips
+        for person in self.citizens:
+            if person.infected==True:
                 
-                for destination in cities_list:
-                    if distances[city][destination]!=0:
+                self.infected+=1
+
+#----------------------------------------------------------------------------
+
+def Simulation(no_days=30, infection_prob=0.3, avg_contact=8, avg_time_trip=4, Npatient0=2):
+    '''
+    This will make the job of the main function for the simulation. All the 
+    parameters have a standard value, but you can change them: no_days says
+    the number of days of simulation; infection_prob is the probability with
+    which a susceptible person, if in contact with an infected person, gets
+    infected; avg_contact is the number of contacts a person has during one
+    day and avg_time_trip is the limit to which a person can spend outside
+    of their home city.
+    '''
+               
+    city_network=hubs_generate(draw=True)
+    nodes_list=list(city_network.nodes)
+    network_infected_list=[]
+        
+    #The population of each city will be proportional to the number of 
+    #connections of the city. The four starting cities will be created 
+    #separately.
+    center=City(nodes_list[0], 2000*NumberofNeighbors(city_network, 1),1)
+    subcenter1=City(nodes_list[1], 2000*NumberofNeighbors(city_network, 2), 11)
+    subcenter2=City(nodes_list[2], 2000*NumberofNeighbors(city_network, 3), 12)
+    subcenter3=City(nodes_list[3], 2000*NumberofNeighbors(city_network, 4), 13)
+    cities_list=[center, subcenter1, subcenter2, subcenter3]
+        
+    for i in range(4, city_network.number_of_nodes()):
+        new_city=City(nodes_list[i], 2000*NumberofNeighbors(city_network, i+1), 100+i)
+        cities_list.append(new_city)
+            
+    distances=dict(nx.all_pairs_shortest_path_length(city_network))
+    #dict of the distances between nodes. distances[n1][n2] gives the distance
+    #between nodes n1 and n2.
+         
+    #N patients 0:
+    for i in range(Npatient0):
+        index=random.randint(0, center.population-1)
+        center.citizens[index].infected=True
+            
+    #time simulation:
+    for day in range(no_days):
+            
+        for city in cities_list:
+            city.Internal_infection(avg_contact, infection_prob) #processes the internal infection before trips
+                
+            for destination in cities_list:
+                if distances[city.node][destination.node]!=0:
                         
-                        travelers=travel_prob(d=distances[city.node][destination.node])*city.population
+                    travelers=int(travel_prob(d=distances[city.node][destination.node])*city.population)
                         
-                        for i in range(travelers):
-                            traveler=random.choice(city.people_in)
-                            traveler.travel(destination)
-                            
-            for city in cities_list:
-                for person in city.people_in:
+                    for i in range(travelers):
+                        traveler=random.choice(city.people_in)
+                        traveler.travel(destination)
+            
+        network_infected=0                
+        for city in cities_list:
+            city.update_infected()
+            network_infected+=city.infected
+                
+            for person in city.people_in:
+                person.pass_day()
+                
+        network_infected_list.append(network_infected)
+        
+    return cities_list, no_days, network_infected
                     
-                    person.pass_day
+# -------------------------------------------------------------------------
+                    
+def Analyse_data(simulation_data, show_timeplot=True, show_logplot=True, save_timeplot=False, save_logplot=False):
+    '''
+    This function receives the result return of the Simulation function and plots
+    the logarithm of the number of infected people on the cities with the 
+    logarithm of the population of the corresponding city if show_logplot==True.
+    In the future, I also intend to implement a linear regression of this plot.
+    If show_timeplot==True, the function plots the time evolution of the disease.
+    '''
+    
+    if show_timeplot==True:
+        cities_list, days, infected_list=simulation_data
+        days_list=[n+1 for n in range(days)]
+        
+        plt.figure()
+        plt.title('Time evolution of the simulation')
+        plt.plot(days_list, infected_list)
+        plt.xlabel('Day')
+        plt.yalebl('Non-cumulative Infected')
+        plt.show()
+        
+        if save_timeplot==True:
+            plt.savefig('time_plot.png')
+    
+    if show_logplot==True:
+        log_pop=[]
+        log_infected=[]
+        
+        for city in cities_list:
+            log_pop.append(np.log(city.population))
+            log_infected.append(np.log(city.infected))
+            
+        plt.figure()
+        plt.title('Logarithm plot of the simulation')
+        plt.scatter(log_pop, log_infected)
+        plt.xlabel('log(P)')
+        plt.ylabel('log(I)')
+        plt.show()
+        
+        if save_logplot==True:
+            plt.savefig('log_plot.png')
+        
+# -----------------------------------------------------------------------
+            
+def main():   
+    simulation=Simulation()
+    Analyse_data(simulation_data=simulation, show_timeplot=False)
+
+if __name__=='__main__':
+    main()    
                     
 '''
-I haven't tested this code yet, the last time I used a simillar approach for this
-with an incredibly higher population, my computer crashed, so be warned that 
-problems might happen and I'm still in the process of finishing this code and
-enhancing it.
+The code is not working yet, I'm solving a few problems right now.
 '''
 
