@@ -254,12 +254,12 @@ def Analyse_data(simulation_data, show_timeplot=True, show_logplot=True, save_ti
             
 def main():   
     simulation=Simulation()
-    Analyse_data(simulation_data=simulation, show_logplot=False)
+    Analyse_data(simulation_data=simulation, show_timeplot=False)
 
 if __name__=='__main__':
     main()    
                     
 '''
-The code is not working yet, I'm solving a few problems right now.
+The code is working, but the results are not the ones expected.
 '''
 
