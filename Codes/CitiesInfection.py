@@ -19,11 +19,12 @@ import networkx as nx
 import numpy as np
 from matplotlib import pyplot as plt
 import random
+from scipy import stats
 from NetworkGeneration import hubs_generate
 
 #--------------------------------------------------------------------------
                 
-def travel_prob(d, a=2.2): #probability of someone traveling to a city at distance 
+def travel_prob(d, a=1.5): #probability of someone traveling to a city at distance 
                            #d of them, a is just a constant.    
     return np.exp(-a*d)
 
@@ -42,9 +43,8 @@ class Person():
     and where they are in a given moment in time.
     '''
     
-    def __init__(self, home_city, current_city, list_index):
+    def __init__(self, home_city, current_city):
         
-        self.index=list_index #list index of the person in their current city
         self.susceptible=True
         self.infected=False
         self.immune=False
@@ -63,14 +63,14 @@ class Person():
         self.infected=False
         self.immune=True
         
-    def travel(self, destination): #destination has to be a City object
+    def travel(self, destination, index): #destination has to be a City object, 
+        #and index is the index the person is in the list of people in the city
         
-        self.current_city.people_in.pop(self.index) #pops the person from the list of the current city
-        self.current_city=destination #sets a new current city
+        self.current_city.people_in.pop(index) #pops the person from the list of the current city
+        self.current_city=destination #sets a new current_city
         self.current_city.people_in.append(self) #puts the person in the list of that city
-        self.index=len(self.current_city.people_in)-1 #sets the new index, which is the last index of the list
         
-    def pass_day(self): #when a day passes, a few things happen
+    def pass_day(self, index): #when a day passes, a few things happen
         
         if self.days_infected==14: #there is a 14 day limit for the person to heal
             self.heal()
@@ -79,7 +79,7 @@ class Person():
             self.days_infected+=1
         
         if self.days_out_home==5: #if they spend a lot of time out of their home city
-            self.travel(self.home_city) #they go back home
+            self.travel(self.home_city, index) #they go back home
         
         if self.current_city!=self.home_city:
             self.days_out_home+=1
@@ -95,11 +95,14 @@ class City():
         
         self.label=label
         self.node=node
-        self.citizens=[Person(self, self, i) for i in range(population)] #the city starts with a healthy population
+        self.citizens=[Person(self, self) for i in range(population)] #the city starts with a healthy population
         self.population=population
-        self.people_in=[person for person in self.citizens] 
+        self.people_in=[] 
         #self.people_in stores the people in the city at a given moment, including
         #travelers and excluding people that traveled from the city
+        
+        for i in range(len(self.citizens)):
+            self.people_in.append(self.citizens[i])
         
         self.infected=0
         
@@ -135,7 +138,7 @@ def Simulation(no_days=30, infection_prob=0.3, avg_contact=8, avg_time_trip=4, N
     of their home city.
     '''
                
-    city_network=hubs_generate(draw=True)
+    city_network=hubs_generate(m=2, N=3,draw=True)
     nodes_list=list(city_network.nodes)
     network_infected_list=[]
         
@@ -156,10 +159,10 @@ def Simulation(no_days=30, infection_prob=0.3, avg_contact=8, avg_time_trip=4, N
     #dict of the distances between nodes. distances[n1][n2] gives the distance
     #between nodes n1 and n2.
          
-    #N patients 0:
+    #N patients 0 in the central city:
     for i in range(Npatient0):
-        index=random.randint(0, center.population-1)
-        center.citizens[index].infected=True
+        rindex=random.randint(0, center.population-1)
+        center.citizens[rindex].get_infected()
             
     #time simulation:
     for day in range(no_days):
@@ -170,23 +173,27 @@ def Simulation(no_days=30, infection_prob=0.3, avg_contact=8, avg_time_trip=4, N
             for destination in cities_list:
                 if distances[city.node][destination.node]!=0:
                         
-                    travelers=int(travel_prob(d=distances[city.node][destination.node])*city.population)
+                    travelers=int(travel_prob(d=distances[city.node][destination.node])*len(city.people_in))
                         
                     for i in range(travelers):
-                        traveler=random.choice(city.people_in)
-                        traveler.travel(destination)
+                        traveler_index=random.randint(0,len(city.people_in)-1)
+                        city.people_in[traveler_index].travel(destination, traveler_index)
             
         network_infected=0                
         for city in cities_list:
             city.update_infected()
             network_infected+=city.infected
+            c=0 #counter
                 
-            for person in city.people_in:
-                person.pass_day()
+            while c<len(city.people_in):
+                
+                city.people_in[i].pass_day(i)
+                c+=1
                 
         network_infected_list.append(network_infected)
+        print('Day ', day, ' simulated!')
         
-    return cities_list, no_days, network_infected
+    return cities_list, no_days, network_infected_list
                     
 # -------------------------------------------------------------------------
                     
@@ -198,9 +205,9 @@ def Analyse_data(simulation_data, show_timeplot=True, show_logplot=True, save_ti
     In the future, I also intend to implement a linear regression of this plot.
     If show_timeplot==True, the function plots the time evolution of the disease.
     '''
+    cities_list, days, infected_list=simulation_data
     
     if show_timeplot==True:
-        cities_list, days, infected_list=simulation_data
         days_list=[n+1 for n in range(days)]
         
         plt.figure()
@@ -209,6 +216,9 @@ def Analyse_data(simulation_data, show_timeplot=True, show_logplot=True, save_ti
         plt.xlabel('Day')
         plt.yalebl('Non-cumulative Infected')
         plt.show()
+        
+        print('a=', 1.5, '& Infection Prob.=', 0.3)
+        print('Number of Cities:', len(cities_list))
         
         if save_timeplot==True:
             plt.savefig('time_plot.png')
@@ -221,12 +231,21 @@ def Analyse_data(simulation_data, show_timeplot=True, show_logplot=True, save_ti
             log_pop.append(np.log(city.population))
             log_infected.append(np.log(city.infected))
             
+        slope, intercept, r, p, stdev=stats.linregress(log_pop, log_infected)
+        
+        x_list=[min(log_pop)+i*(max(log_pop)-min(log_pop))/10 for i in range(11)]
+            
         plt.figure()
         plt.title('Logarithm plot of the simulation')
         plt.scatter(log_pop, log_infected)
+        plt.plot(x_list, [slope*x+intercept for x in x_list], 'k')
         plt.xlabel('log(P)')
         plt.ylabel('log(I)')
         plt.show()
+        
+        print('Number of Cities:', len(cities_list))
+        print('Slope: ', slope, '\nIntercept:', intercept, '\nStandard Deviation:', stdev)
+        print('a=', 1.5, '& Infection Prob.=', 0.3)
         
         if save_logplot==True:
             plt.savefig('log_plot.png')
@@ -235,7 +254,7 @@ def Analyse_data(simulation_data, show_timeplot=True, show_logplot=True, save_ti
             
 def main():   
     simulation=Simulation()
-    Analyse_data(simulation_data=simulation, show_timeplot=False)
+    Analyse_data(simulation_data=simulation, show_logplot=False)
 
 if __name__=='__main__':
     main()    
