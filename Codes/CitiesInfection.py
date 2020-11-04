@@ -21,12 +21,15 @@ from matplotlib import pyplot as plt
 import random
 from scipy import stats
 from NetworkGeneration import hubs_generate
+import time
 
 #--------------------------------------------------------------------------
-                
-def travel_prob(d, a=1.5): #probability of someone traveling to a city at distance 
+a=1.9   
+inf_prob=0.3
+
+def travel_prob(d, l=a): #probability of someone traveling to a city at distance 
                            #d of them, a is just a constant.    
-    return np.exp(-a*d)
+    return np.exp(-l*d)
 
 def NumberofNeighbors(graph, node_label):
     
@@ -43,7 +46,7 @@ class Person():
     and where they are in a given moment in time.
     '''
     
-    def __init__(self, home_city, current_city):
+    def __init__(self, home_city, current_city, heal_prob=0.1):
         
         self.susceptible=True
         self.infected=False
@@ -52,6 +55,7 @@ class Person():
         self.current_city=current_city
         self.days_infected=0 #number of days the person has been infected
         self.days_out_home=0
+        self.heal_prob=heal_prob
         
     def get_infected(self):
         
@@ -83,6 +87,9 @@ class Person():
         
         if self.current_city!=self.home_city:
             self.days_out_home+=1
+            
+        if random.random()<self.heal_prob:
+            self.heal()
             
 class City():
     '''
@@ -127,7 +134,7 @@ class City():
 
 #----------------------------------------------------------------------------
 
-def Simulation(no_days=30, infection_prob=0.3, avg_contact=8, avg_time_trip=4, Npatient0=2):
+def Simulation(no_days=60, infection_prob=inf_prob, avg_contact=8, avg_time_trip=4, Npatient0=1):
     '''
     This will make the job of the main function for the simulation. All the 
     parameters have a standard value, but you can change them: no_days says
@@ -214,10 +221,10 @@ def Analyse_data(simulation_data, show_timeplot=True, show_logplot=True, save_ti
         plt.title('Time evolution of the simulation')
         plt.plot(days_list, infected_list)
         plt.xlabel('Day')
-        plt.yalebl('Non-cumulative Infected')
+        plt.ylabel('Non-cumulative Infected')
         plt.show()
         
-        print('a=', 1.5, '& Infection Prob.=', 0.3)
+        print('a=', a, '& Infection Prob.=', inf_prob)
         print('Number of Cities:', len(cities_list))
         
         if save_timeplot==True:
@@ -245,7 +252,7 @@ def Analyse_data(simulation_data, show_timeplot=True, show_logplot=True, save_ti
         
         print('Number of Cities:', len(cities_list))
         print('Slope: ', slope, '\nIntercept:', intercept, '\nStandard Deviation:', stdev)
-        print('a=', 1.5, '& Infection Prob.=', 0.3)
+        print('a=', a, '& Infection Prob.=', inf_prob)
         
         if save_logplot==True:
             plt.savefig('log_plot.png')
@@ -254,10 +261,14 @@ def Analyse_data(simulation_data, show_timeplot=True, show_logplot=True, save_ti
             
 def main():   
     simulation=Simulation()
-    Analyse_data(simulation_data=simulation, show_timeplot=False)
+    Analyse_data(simulation_data=simulation)
+
+start_time=time.time()
 
 if __name__=='__main__':
-    main()    
+    main()   
+    
+print('Execution time: %s seconds' % (time.time() - start_time))
                     
 '''
 The code is working, but the results are not the ones expected.
