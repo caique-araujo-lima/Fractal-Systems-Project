@@ -70,4 +70,4 @@ def hubs_generate(p=0.7,m=3,N=2, draw=False, save=False):
 #the following lines are meant to test this module
 
 if __name__=='__main__':
-    hubs_generate(0.7,3,2,True)
+    hubs_generate(0.7,1,4,True)

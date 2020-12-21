@@ -24,8 +24,8 @@ from NetworkGeneration import hubs_generate
 import time
 
 #--------------------------------------------------------------------------
-a=1.9   
-inf_prob=0.3
+a=3.8
+inf_prob=0.1
 
 def travel_prob(d, l=a): #probability of someone traveling to a city at distance 
                            #d of them, a is just a constant.    
@@ -46,7 +46,7 @@ class Person():
     and where they are in a given moment in time.
     '''
     
-    def __init__(self, home_city, current_city, heal_prob=0.1):
+    def __init__(self, home_city, current_city, heal_prob=1/14):
         
         self.susceptible=True
         self.infected=False
@@ -112,8 +112,9 @@ class City():
             self.people_in.append(self.citizens[i])
         
         self.infected=0
+        self.cumulative_infected=0
         
-    def Internal_infection(self, avg_contact, infection_prob):
+    def Internal_infection(self, avg_contact, infection_prob, daily_infected):
         
         for person in self.people_in: #for each citizen
             if person.infected==True: #the infected ones will test to see if they will infect someone
@@ -122,6 +123,10 @@ class City():
                     if self.people_in[contact].susceptible==True and random.random()<=infection_prob:
                         
                         self.people_in[contact].get_infected() #there is a random chance of that contact becoming infected
+                        self.cumulative_infected+=1
+                        daily_infected+=1
+                        
+        return daily_infected
                         
     def update_infected(self):
         
@@ -134,18 +139,18 @@ class City():
 
 #----------------------------------------------------------------------------
 
-def Simulation(no_days=60, infection_prob=inf_prob, avg_contact=8, avg_time_trip=4, Npatient0=1):
+def Simulation(no_days=300, infection_prob=inf_prob, avg_contact=8, avg_time_trip=4, Npatient0=3):
     '''
     This will make the job of the main function for the simulation. All the 
-    parameters have a standard value, but you can change them: no_days says
-    the number of days of simulation; infection_prob is the probability with
+    parameters have a standard value, but you can change them: no_days is
+    the number of days to be simulated; infection_prob is the probability with
     which a susceptible person, if in contact with an infected person, gets
     infected; avg_contact is the number of contacts a person has during one
     day and avg_time_trip is the limit to which a person can spend outside
     of their home city.
     '''
                
-    city_network=hubs_generate(m=2, N=3,draw=True)
+    city_network=hubs_generate(m=1, N=3,draw=True)
     nodes_list=list(city_network.nodes)
     network_infected_list=[]
         
@@ -170,13 +175,18 @@ def Simulation(no_days=60, infection_prob=inf_prob, avg_contact=8, avg_time_trip
     for i in range(Npatient0):
         rindex=random.randint(0, center.population-1)
         center.citizens[rindex].get_infected()
-            
+        center.cumulative_infected+=1
+    
+    daily_list=[]
+      
     #time simulation:
     for day in range(no_days):
+        daily_infected=0
             
         for city in cities_list:
-            city.Internal_infection(avg_contact, infection_prob) #processes the internal infection before trips
-                
+            new_inf=city.Internal_infection(avg_contact, infection_prob, daily_infected) #processes the internal infection before trips
+            daily_infected+=new_inf
+            
             for destination in cities_list:
                 if distances[city.node][destination.node]!=0:
                         
@@ -185,6 +195,8 @@ def Simulation(no_days=60, infection_prob=inf_prob, avg_contact=8, avg_time_trip
                     for i in range(travelers):
                         traveler_index=random.randint(0,len(city.people_in)-1)
                         city.people_in[traveler_index].travel(destination, traveler_index)
+            
+        
             
         network_infected=0                
         for city in cities_list:
@@ -196,15 +208,18 @@ def Simulation(no_days=60, infection_prob=inf_prob, avg_contact=8, avg_time_trip
                 
                 city.people_in[i].pass_day(i)
                 c+=1
-                
+
+        daily_list.append(daily_infected)                
         network_infected_list.append(network_infected)
-        print('Day ', day, ' simulated!')
+        print('Day ', day+1, ' simulated!')
         
-    return cities_list, no_days, network_infected_list
+    return cities_list, no_days, network_infected_list, daily_list
                     
 # -------------------------------------------------------------------------
                     
-def Analyse_data(simulation_data, show_timeplot=True, show_logplot=True, save_timeplot=False, save_logplot=False):
+def Analyse_data(simulation_data, show_timeplot=True, show_logplot=True, 
+                 save_timeplot=False, save_logplot=False, 
+                 show_daily_cases=True, save_daily_cases=False):
     '''
     This function receives the result return of the Simulation function and plots
     the logarithm of the number of infected people on the cities with the 
@@ -212,7 +227,7 @@ def Analyse_data(simulation_data, show_timeplot=True, show_logplot=True, save_ti
     In the future, I also intend to implement a linear regression of this plot.
     If show_timeplot==True, the function plots the time evolution of the disease.
     '''
-    cities_list, days, infected_list=simulation_data
+    cities_list, days, infected_list, daily_list=simulation_data
     
     if show_timeplot==True:
         days_list=[n+1 for n in range(days)]
@@ -236,7 +251,7 @@ def Analyse_data(simulation_data, show_timeplot=True, show_logplot=True, save_ti
         
         for city in cities_list:
             log_pop.append(np.log(city.population))
-            log_infected.append(np.log(city.infected))
+            log_infected.append(np.log(city.cumulative_infected))
             
         slope, intercept, r, p, stdev=stats.linregress(log_pop, log_infected)
         
@@ -256,7 +271,21 @@ def Analyse_data(simulation_data, show_timeplot=True, show_logplot=True, save_ti
         
         if save_logplot==True:
             plt.savefig('log_plot.png')
-        
+            
+        if show_daily_cases==True:
+            
+            days_list=[n+1 for n in range(days)]                        
+             
+            plt.figure()
+            plt.title('Daily Cases')
+            plt.plot(days_list, daily_list)
+            plt.xlabel('Day')
+            plt.ylabel('New Infected')
+            plt.show()
+            
+            if save_daily_cases==True:
+                plt.savefig('daily_cases.png')
+            
 # -----------------------------------------------------------------------
             
 def main():   
@@ -271,6 +300,6 @@ if __name__=='__main__':
 print('Execution time: %s seconds' % (time.time() - start_time))
                     
 '''
-The code is working, but the results are not the ones expected.
+The code is working, but the results are not exactly the ones expected.
 '''
 
