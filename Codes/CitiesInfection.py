@@ -24,8 +24,8 @@ from NetworkGeneration import hubs_generate
 import time
 
 #--------------------------------------------------------------------------
-a=3.8
-inf_prob=0.1
+a=3.5
+inf_prob=0.2
 
 def travel_prob(d, l=a): #probability of someone traveling to a city at distance 
                            #d of them, a is just a constant.    
@@ -114,7 +114,9 @@ class City():
         self.infected=0
         self.cumulative_infected=0
         
-    def Internal_infection(self, avg_contact, infection_prob, daily_infected):
+    def Internal_infection(self, avg_contact, infection_prob):
+        
+        new_infected=0
         
         for person in self.people_in: #for each citizen
             if person.infected==True: #the infected ones will test to see if they will infect someone
@@ -124,9 +126,9 @@ class City():
                         
                         self.people_in[contact].get_infected() #there is a random chance of that contact becoming infected
                         self.cumulative_infected+=1
-                        daily_infected+=1
+                        new_infected+=1
                         
-        return daily_infected
+        return new_infected
                         
     def update_infected(self):
         
@@ -139,7 +141,8 @@ class City():
 
 #----------------------------------------------------------------------------
 
-def Simulation(no_days=300, infection_prob=inf_prob, avg_contact=8, avg_time_trip=4, Npatient0=3):
+def Simulation(no_days=350, infection_prob=inf_prob,
+               avg_contact=8, avg_time_trip=4, Npatient0=3):
     '''
     This will make the job of the main function for the simulation. All the 
     parameters have a standard value, but you can change them: no_days is
@@ -150,7 +153,7 @@ def Simulation(no_days=300, infection_prob=inf_prob, avg_contact=8, avg_time_tri
     of their home city.
     '''
                
-    city_network=hubs_generate(m=1, N=3,draw=True)
+    city_network=hubs_generate(m=1, N=4,draw=True)
     nodes_list=list(city_network.nodes)
     network_infected_list=[]
         
@@ -184,7 +187,7 @@ def Simulation(no_days=300, infection_prob=inf_prob, avg_contact=8, avg_time_tri
         daily_infected=0
             
         for city in cities_list:
-            new_inf=city.Internal_infection(avg_contact, infection_prob, daily_infected) #processes the internal infection before trips
+            new_inf=city.Internal_infection(avg_contact, infection_prob) #processes the internal infection before trips
             daily_infected+=new_inf
             
             for destination in cities_list:
@@ -274,8 +277,8 @@ def Analyse_data(simulation_data, show_timeplot=True, show_logplot=True,
             
         if show_daily_cases==True:
             
-            days_list=[n+1 for n in range(days)]                        
-             
+            days_list=[n+1 for n in range(days)]
+            
             plt.figure()
             plt.title('Daily Cases')
             plt.plot(days_list, daily_list)
