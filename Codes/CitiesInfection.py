@@ -24,8 +24,8 @@ from NetworkGeneration import hubs_generate
 import time
 
 #--------------------------------------------------------------------------
-a=3.5
-inf_prob=0.1
+a=7
+inf_prob=0.07
 
 def travel_prob(d, l=a): #probability of someone traveling to a city at distance 
                            #d of them, a is just a constant.    
@@ -55,7 +55,7 @@ class Person():
         self.current_city=current_city
         self.days_infected=0 #number of days the person has been infected
         self.days_out_home=0
-        self.heal_prob=heal_prob
+        self.heal_prob=self.days_infected/20
         
     def get_infected(self):
         
@@ -77,8 +77,8 @@ class Person():
         
     def pass_day(self): #when a day passes, a few things happen
         
-        if self.days_infected==14: #there is a 14 day limit for the person to heal
-            self.heal()
+        #if self.days_infected==14: #there is a 14 day limit for the person to heal
+         #   self.heal()
         
         if self.infected==True: 
             self.days_infected+=1
@@ -148,8 +148,8 @@ class City():
 
 #----------------------------------------------------------------------------
 
-def Simulation(no_days=100, infection_prob=inf_prob,
-               avg_contact=8, avg_time_trip=4, Npatient0=2):
+def Simulation(no_days=80, infection_prob=inf_prob,
+               avg_contact=8, avg_time_trip=4, Npatient0=1):
     '''
     This will make the job of the main function for the simulation. All the 
     parameters have a standard value, but you can change them: no_days is
@@ -160,7 +160,7 @@ def Simulation(no_days=100, infection_prob=inf_prob,
     of their home city.
     '''
                
-    city_network=hubs_generate(m=1, N=4,draw=True)
+    city_network=hubs_generate(m=1, N=3,draw=True)
     nodes_list=list(city_network.nodes)
     network_infected_list=[]
         
