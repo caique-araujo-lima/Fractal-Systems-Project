@@ -24,8 +24,8 @@ from NetworkGeneration import hubs_generate
 import time
 
 #--------------------------------------------------------------------------
-a=7
-inf_prob=0.05
+a=7 #a~7 returns good results
+inf_prob=0.05 #p~0.05 returns good results
 
 def travel_prob(d, l=a): #probability of someone traveling to a city at distance 
                            #d of them, a is just a constant.    
@@ -112,25 +112,6 @@ class City():
         self.people_in=[] 
         #self.people_in stores the people in the city at a given moment, including
         #travelers and excluding people that traveled from the city
-        self.first_infected=None #day the first person was infected
-        self.last_infected=None #day the last person got infected
-        
-        #the "status" of the city is indicated by a number:
-        #0 means no citizen is infected, 1 means there are people infected, but
-        #not everyone, and -1 indicates every citizen in the city is infected
-        c=0 #counter
-        for citizen in self.citizens:
-            if citizen.infected==True or citizen.immune==True:
-                c+=1
-                
-        if c==0:
-            self.status=0
-                
-        if c<len(self.citizens):
-            self.status=1
-            
-        if c==len(self.citizens):
-            self.status=-1
         
         self.infected=0 #non-cumulative infected
         self.cumulative_infected=0 #cumulative infected
@@ -170,7 +151,7 @@ class City():
 
 #----------------------------------------------------------------------------
 
-def Simulation(no_days=165, infection_prob=inf_prob,
+def Simulation(no_days=90, infection_prob=inf_prob,
                avg_contact=6, avg_time_trip=4, Npatient0=1):
     '''
     This will make the job of the main function for the simulation. All the 
@@ -225,15 +206,8 @@ def Simulation(no_days=165, infection_prob=inf_prob,
         daily_infected=0 #new people infected in a given day
             
         for city in cities_list:
-            initial_status=city.status
             new_inf=city.Internal_infection(avg_contact, infection_prob) #processes the internal infection before trips
             daily_infected+=new_inf
-            
-            if initial_status==0 and city.status==1:
-                city.first_infected=day
-                
-            if initial_status==1 and city.status==-1:
-                city.last_infected=day
             
             for destination in cities_list:
                 
@@ -262,10 +236,10 @@ def Simulation(no_days=165, infection_prob=inf_prob,
                     
 # -------------------------------------------------------------------------
                     
-def Analyse_data(simulation_data, show_timeplot=True, save_timeplot=False,
+def Analyse_data(simulation_data, 
+                 show_timeplot=True, save_timeplot=False,
                  show_logplot=True, save_logplot=False, 
-                 show_daily_cases=True, save_daily_cases=False,
-                 show_dtplot=False, save_dtplot=False):
+                 show_daily_cases=True, save_daily_cases=False):
     #maintain show_dtplot set to False, this function is not working, I'll remove
     #this part afterwards
     
@@ -335,28 +309,6 @@ def Analyse_data(simulation_data, show_timeplot=True, save_timeplot=False,
             
         if save_daily_cases==True:
             plt.savefig('daily_cases.png')
-            
-    if show_dtplot==True:
-        
-        populations=[city.population for city in cities_list if city.last_infected!=None]
-        intervals=[(city.last_infected-city.first_infected) for city in cities_list if city.last_infected!=None]
-        logpop=[np.log(pop) for pop in populations]
-        logint=[np.log(intv) for intv in intervals]
-        
-        slope, intercept, r, p, stdev=stats.linregress(logpop, logint)
-        
-        plt.figure()
-        plt.title('Time Intervals Analysis')
-        plt.plot(logpop, logint)
-        plt.plot(logpop, [slope*x+intercept for x in logpop], 'k')
-        plt.xlabel('log(P)')
-        plt.ylabel('log(dt)')
-        plt.show()
-        
-        print('Slope:', slope, '\nStandard Deviation:', stdev)
-        
-        if save_dtplot==True:
-            plt.savefig('interval_analysis.png')
             
 # -----------------------------------------------------------------------
             
