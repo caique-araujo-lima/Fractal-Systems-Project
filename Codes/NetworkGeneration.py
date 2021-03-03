@@ -7,7 +7,10 @@ various characteristics, according to various algorithms.
 
 import random
 import networkx as nx
+import numpy as np
 import matplotlib.pyplot as plt
+from scipy.stats import rv_continuous
+import math
 
 def hubs_generate(p=0.7,m=3,N=2, draw=False, save=False): 
     '''
@@ -69,7 +72,25 @@ def hubs_generate(p=0.7,m=3,N=2, draw=False, save=False):
     return nk
 
 #---#---#---#---#---#---#---#---#---#---#---#---#---#---#---#---#---#---#---#---#
+
+w0, eta=1, 1
+
+class exponential(rv_continuous):
+    '''
+    This is a VERY confusing part of the code. This is supposed to create a custom
+    probability distribution function, equation 3 in the article. This is what is
+    (apparently) called an abstract base class (ABC), its kind of a base class where
+    you can build the "rest" of the class by yourself. In this case, we give this class
+    a distribution function, and the class takes care of making it work with every
+    other function and class in the module and in python. Here is the link for the class:
+    https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rv_continuous.html
+    '''   
+    def _pdf(self, x): 
+        
+        return eta/(w0*math.gamma(1/eta))*np.exp(-(x/w0)**eta)
     
+stretched_exponential=exponential(name='stretched_exponential')
+
 class Geo_Node:
     
     '''
@@ -111,16 +132,21 @@ class Geo_Network:
         The network starts completely empty if you don't initiate it with any
         arguments, and then you can build the network yourself. If, on the other
         hand, you have a pre-made network and want to use it, you can do it, the
-        edges_list argument receives a list on the format [(A,B), (A,C), (B,D), etc]
+        edges_list argument receives a list on the format [(A,B,w1), (A,C,w2), (B,D,w3), etc]
         containing all the edges of the network, where A, B, C, D, etc, are nodes
-        (Geo_Node format) of your network and (A,B) represents an edge between
-        nodes A and B.
+        (Geo_Node format) of your network and (A,B,w) represents an edge between
+        nodes A and B with weight w.
         '''
         
         if edges_list!=None:
             
-            self.edges=edges_list
+            self.edges=[(edge[0], edge[1]) for edge in edges_list]
             self.nodes=[]
+            self.edges_weights={} #dict storing the weights of the edges
+            
+            for edge in edges_list:
+                if len(edge)==3:
+                    self.edges_weights[edge]=edge[3]
             
             for tup in self.edges:
                 
@@ -134,11 +160,22 @@ class Geo_Network:
             self.nodes=[]
             self.edges=[]
             
+        xsum=0
+        ysum=0
+        weight_sum=0
+        
+        for node in self.nodes:
+            xsum+=node.weight*node.x
+            ysum+=node.y*node.weight
+            weight_sum+=node.weight
+            
+        self.center_mass=(xsum/weight_sum, ysum/weight_sum)
+            
     def add_node(self, node): #node has to be an object of the type Geo_Node
         
         self.nodes.append(node)
         
-    def add_edge(self, node1, node2):
+    def add_edge(self, node1, node2, weight):
         '''
         This function can create an edge between two preexisting nodes, or you
         can create new nodes from it. If you do self.add_edge(A,B), both A and
@@ -148,6 +185,7 @@ class Geo_Network:
         '''
         
         self.edges.append((node1, node2))
+        self.edges_weights[(node1, node2)]=weight
         
         if node1 not in self.nodes:
             self.nodes.append(node1)
@@ -161,19 +199,49 @@ class Geo_Network:
         distance=((self.node1.x-self.node2.x)**2+(self.node1.y-self.node2.y)**2)**0.5
         
         return distance
-        
     
-def TN_model_generate(self, alpha, N):
+    def update_center(self):
+        #update the center of mass of the network
+        xsum=0
+        ysum=0
+        weight_sum=0
+        
+        for node in self.nodes:
+            xsum+=node.weight*node.x
+            ysum+=node.y*node.weight
+            weight_sum+=node.weight
+            
+        self.center_mass=(xsum/weight_sum, ysum/weight_sum)       
+    
+def TN_model_generate(self, alpha_A, alpha_G, N):
     
     '''
     This function will create a network based on a network model presented by 
     Constantino Tsallis in the paper available in the references text. The model
     is still unamed, so I named it for the purposes of this code as Tsallis Network
-    model (explaining why TN_model). The parameter alpha is, obviously, the same
-    alpha from the article used as reference and N is the number of iterations.
+    model (explaining why TN_model). The parameters alpha are, obviously, the same
+    alphas from the article used as reference and N is the number of iterations.
+    The dimension, for now, will be always 2 for simplicity.
     '''
     
-    nk=0
+    nk=Geo_Network()
+    node1=Geo_Node((0,0), 1)
+    nk.add_node(node1)
+    
+    r=random.paretovariate(1+alpha_G) #take a look at the pareto variate prob
+    #distribution to understand why I'm using it, I'm also assuming the module
+    #uses xm=1 to be compatible with the r>=1 of the article.
+    
+    node2_x=random.uniform(-1, 1) #Here I'm randomly choosing the angular position
+    node2_y=(r**2-node2_x**2)**0.5 #of the 2nd node, since it is apparently arbitrary
+    
+    node2=Geo_Node((node2_x, node2_y), 1)
+    nk.add_node(node2)
+    edge12_weight=stretched_exponential.rvs()
+    
+    nk.add_edge(node1, node2, edge12_weight)
+    
+    #FALTANDO: IMPLEMENTAR AS ENERGIAS DOS NÓS E FAZER A ITERAÇÃO DE I=3 EM DIANTE
     
     return nk
 
