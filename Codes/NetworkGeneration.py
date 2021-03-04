@@ -73,24 +73,6 @@ def hubs_generate(p=0.7,m=3,N=2, draw=False, save=False):
 
 #---#---#---#---#---#---#---#---#---#---#---#---#---#---#---#---#---#---#---#---#
 
-w0, eta=1, 1
-
-class exponential(rv_continuous):
-    '''
-    This is a VERY confusing part of the code. This is supposed to create a custom
-    probability distribution function, equation 3 in the article. This is what is
-    (apparently) called an abstract base class (ABC), its kind of a base class where
-    you can build the "rest" of the class by yourself. In this case, we give this class
-    a distribution function, and the class takes care of making it work with every
-    other function and class in the module and in python. Here is the link for the class:
-    https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rv_continuous.html
-    '''   
-    def _pdf(self, x): 
-        
-        return eta/(w0*math.gamma(1/eta))*np.exp(-(x/w0)**eta)
-    
-stretched_exponential=exponential(name='stretched_exponential')
-
 class Geo_Node:
     
     '''
@@ -118,6 +100,16 @@ class Geo_Node:
         self.weight=weight
         self.neighbours=[] #this list contains all the neighbours of the node, 
         #every node that is directly connected to it.
+        
+    def update_weight(self, edge_dict):
+        #the edge_dict has to be the dictionary of edges available with the 
+        #Geo_Network class.
+        
+        new_weight=0
+        
+        for edge in edge_dict:
+            if self in edge:
+                new_weight+=edge_dict[edge]
 
 class Geo_Network:
     
@@ -156,20 +148,22 @@ class Geo_Network:
                 if tup[1] not in self.nodes:
                     self.nodes.append(tup[1])
                     
+            xsum=0
+            ysum=0
+            weight_sum=0
+        
+            for node in self.nodes:
+                xsum+=node.weight*node.x
+                ysum+=node.y*node.weight
+                weight_sum+=node.weight
+            
+            self.center_mass=(xsum/weight_sum, ysum/weight_sum)
+                    
         else:
             self.nodes=[]
             self.edges=[]
-            
-        xsum=0
-        ysum=0
-        weight_sum=0
-        
-        for node in self.nodes:
-            xsum+=node.weight*node.x
-            ysum+=node.y*node.weight
-            weight_sum+=node.weight
-            
-        self.center_mass=(xsum/weight_sum, ysum/weight_sum)
+            self.center_mass=None
+            self.edges_weights={}
             
     def add_node(self, node): #node has to be an object of the type Geo_Node
         
@@ -196,7 +190,7 @@ class Geo_Network:
     def euclid_distance(self, node1, node2):
         #calculate the euclidean distance between node1 and node2
         
-        distance=((self.node1.x-self.node2.x)**2+(self.node1.y-self.node2.y)**2)**0.5
+        distance=((node1.x-node2.x)**2+(node1.y-node2.y)**2)**0.5
         
         return distance
     
@@ -211,9 +205,57 @@ class Geo_Network:
             ysum+=node.y*node.weight
             weight_sum+=node.weight
             
-        self.center_mass=(xsum/weight_sum, ysum/weight_sum)       
+        self.center_mass=(xsum/weight_sum, ysum/weight_sum)      
+        
+def print_Geo_Network(nk, title='My Network', save=False):
+    '''
+    This function takes as an argument an object of the class Geo_Network, and
+    it prints, using matplotlib, the network with simple lines representing edges
+    and dots representing nodes. In the future, I'll try to work out a way to
+    display the weight of the nodes and edges using different sizes and/or colors.
+    You can set the title of the network with the title argument. If save is set
+    to True, it will save a .png image of the network on the same directory as
+    your code.
+    '''
     
-def TN_model_generate(self, alpha_A, alpha_G, N):
+    x_list, y_list=[],[]
+    
+    for node in nk.nodes:
+        x_list.append(node.x)
+        y_list.append(node.y)
+    
+    plt.figure()
+    plt.title(title)
+    plt.xlabel('x')
+    plt.ylabel('y')
+    plt.scatter(x_list, y_list, marker='o', color='midnightblue')
+        
+    plt.show()
+    
+    if save==True:
+        plt.savefig('my_network.png')
+
+#---#---#---#---#---#---#---#---#---#---#---#---#---#---#---#---#---#---#---#---#
+
+w0, eta=1, 1
+
+class exponential(rv_continuous):
+    '''
+    This is a VERY confusing part of the code. This is supposed to create a custom
+    probability distribution function, equation 3 in the article. This is what is
+    (apparently) called an abstract base class (ABC), its kind of a base class where
+    you can build the "rest" of the class by yourself. In this case, we give this class
+    a distribution function, and the class takes care of making it work with every
+    other function and class in the module and in python. Here is the link for the class:
+    https://docs.scipy.org/doc/scipy/reference/generated/scipy.stats.rv_continuous.html
+    '''   
+    def _pdf(self, x): 
+        
+        return eta/(w0*math.gamma(1/eta))*np.exp(-(x/w0)**eta)
+    
+stretched_exponential=exponential(name='stretched_exponential', a=0)
+   
+def TN_model_generate(alpha_A, alpha_G, N):
     
     '''
     This function will create a network based on a network model presented by 
@@ -227,25 +269,53 @@ def TN_model_generate(self, alpha_A, alpha_G, N):
     nk=Geo_Network()
     node1=Geo_Node((0,0), 1)
     nk.add_node(node1)
+    nk.update_center()
     
     r=random.paretovariate(1+alpha_G) #take a look at the pareto variate prob
     #distribution to understand why I'm using it, I'm also assuming the module
     #uses xm=1 to be compatible with the r>=1 of the article.
-    
-    node2_x=random.uniform(-1, 1) #Here I'm randomly choosing the angular position
-    node2_y=(r**2-node2_x**2)**0.5 #of the 2nd node, since it is apparently arbitrary
+    o=random.uniform(0, 2*np.pi) #Here I'm randomly choosing the angular position
+    node2_x=nk.center_mass[0]+r*np.cos(o) #of the 2nd node, since it is apparently 
+    node2_y=nk.center_mass[1]+r*np.sin(o) #arbitrary
     
     node2=Geo_Node((node2_x, node2_y), 1)
     nk.add_node(node2)
     edge12_weight=stretched_exponential.rvs()
     
     nk.add_edge(node1, node2, edge12_weight)
+    node1.weight=edge12_weight/2
+    node2.weight=edge12_weight/2
     
-    #FALTANDO: IMPLEMENTAR AS ENERGIAS DOS NÓS E FAZER A ITERAÇÃO DE I=3 EM DIANTE
+    nk.update_center()
+    
+    for i in range(2,N):
+        r=random.paretovariate(1+alpha_G)
+        o=random.uniform(0, 2*np.pi) 
+        nodei_x=nk.center_mass[0]+r*np.cos(o) 
+        nodei_y=nk.center_mass[1]+r*np.sin(o) 
+        nodei=Geo_Node((nodei_x, nodei_y),1)
+        nk.add_node(nodei)
+        
+        qsum=0 #denominador do fator de normalizaçao da probabilidade Pi_{ij}
+        
+        for j in range(i):
+            qsum+=nk.nodes[j].weight/nk.euclid_distance(nk.nodes[i], nk.nodes[j])
+            
+        q=1/qsum #fator de normalização
+        
+        for j in range(i):
+            if q*nk.nodes[j].weight/nk.euclid_distance(nk.nodes[i], nk.nodes[j])<random.random():
+                edgeij_weight=stretched_exponential.rvs()
+                nk.add_edge(nk.nodes[i], nk.nodes[j], edgeij_weight)
+                
+                nk.nodes[j].update_weight(nk.edges_weights)
+                
+        print('Iteration', i, 'is complete!')
     
     return nk
 
 #---#---#---#---#---#---#---#---#---#---#---#---#---#---#---#---#---#---#---#---#
 
 if __name__=='__main__':
-    hubs_generate(m=1,N=4,draw=True, save=True)
+    TN_network=TN_model_generate(1, 1, 80)
+    print_Geo_Network(TN_network)
