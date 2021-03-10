@@ -11,6 +11,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from scipy.stats import rv_continuous
 import math
+import time
 
 def hubs_generate(p=0.7,m=3,N=2, draw=False, save=False): 
     '''
@@ -109,7 +110,7 @@ class Geo_Node:
         
         for edge in edge_dict:
             if self in edge:
-                new_weight+=edge_dict[edge]
+                new_weight+=edge_dict[edge]/2
 
 class Geo_Network:
     
@@ -302,20 +303,32 @@ def TN_model_generate(alpha_A, alpha_G, N):
             qsum+=nk.nodes[j].weight/nk.euclid_distance(nk.nodes[i], nk.nodes[j])
             
         q=1/qsum #fator de normalização
-        
+        c=0 #counter, to garantee no node will be linkless
         for j in range(i):
-            if q*nk.nodes[j].weight/nk.euclid_distance(nk.nodes[i], nk.nodes[j])<random.random():
+            if q*nk.nodes[j].weight/nk.euclid_distance(nk.nodes[i], nk.nodes[j])<random.random() or (j==i-1 and c==0):
                 edgeij_weight=stretched_exponential.rvs()
                 nk.add_edge(nk.nodes[i], nk.nodes[j], edgeij_weight)
                 
-                nk.nodes[j].update_weight(nk.edges_weights)
+                if nodei.weight==1:
+                    nodei.weight=edgeij_weight/2
+                    
+                else:
+                    nodei.weight+=edgeij_weight/2
+                    
+                nk.nodes[j].weight+=edgeij_weight/2
+                c+=1
                 
-        print('Iteration', i, 'is complete!')
+        for node in nk.nodes:
+            node.update_weight(nk.edges_weights)
+                
+        #print('Iteration', i+1, 'is complete!')
     
     return nk
 
 #---#---#---#---#---#---#---#---#---#---#---#---#---#---#---#---#---#---#---#---#
 
 if __name__=='__main__':
-    TN_network=TN_model_generate(1, 1, 80)
+    t0=time.time()
+    TN_network=TN_model_generate(1, 1, 100)
     print_Geo_Network(TN_network)
+    print('Time of execution:', time.time()-t0)
