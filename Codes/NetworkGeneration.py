@@ -297,26 +297,42 @@ def TN_model_generate(alpha_A, alpha_G, N):
         nodei=Geo_Node((nodei_x, nodei_y),1)
         nk.add_node(nodei)
         
-        qsum=0 #denominador do fator de normalizaçao da probabilidade Pi_{ij}
+        connections_list=random.choices(nk.nodes, weights=[node.weight/nk.euclid_distance(nodei, node) for node in nk.nodes], k=1)
         
-        for j in range(i):
-            qsum+=nk.nodes[j].weight/nk.euclid_distance(nk.nodes[i], nk.nodes[j])
+        for connection in connections_list:
+            edgeij_weight=stretched_exponential.rvs()
+            nk.add_edge(nodei, connection, edgeij_weight)
+        
+            if nodei.weight==1.0:
+                nodei.weight=edgeij_weight/2
             
-        q=1/qsum #fator de normalização
-        c=0 #counter, to garantee no node will be linkless
-        for j in range(i):
-            if q*nk.nodes[j].weight/nk.euclid_distance(nk.nodes[i], nk.nodes[j])<random.random() or (j==i-1 and c==0):
-                edgeij_weight=stretched_exponential.rvs()
-                nk.add_edge(nk.nodes[i], nk.nodes[j], edgeij_weight)
-                
-                if nodei.weight==1:
-                    nodei.weight=edgeij_weight/2
-                    
-                else:
-                    nodei.weight+=edgeij_weight/2
-                    
-                nk.nodes[j].weight+=edgeij_weight/2
-                c+=1
+            else:
+                nodei.weight+=edgeij_weight/2
+            
+            connection.weight+=edgeij_weight/2
+        
+        #qsum=0 #denominador do fator de normalizaçao da probabilidade Pi_{ij}
+        
+        #for j in range(i):
+            #qsum+=nk.nodes[j].weight/nk.euclid_distance(nk.nodes[i], nk.nodes[j])
+            
+        #q=1/qsum #fator de normalização
+        
+        #c=0 #counter, to garantee no node will be linkless
+        
+        #for j in range(i):
+         #   if q*nk.nodes[j].weight/nk.euclid_distance(nk.nodes[i], nk.nodes[j])<random.random() or (j==i-1 and c==0):
+         #       edgeij_weight=stretched_exponential.rvs()
+         #       nk.add_edge(nk.nodes[i], nk.nodes[j], edgeij_weight)
+         #       
+         #       if nodei.weight==1:
+         #           nodei.weight=edgeij_weight/2
+         #           
+         #       else:
+         #           nodei.weight+=edgeij_weight/2
+         #           
+         #       nk.nodes[j].weight+=edgeij_weight/2
+         #       c+=1
                 
         for node in nk.nodes:
             node.update_weight(nk.edges_weights)

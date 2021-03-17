@@ -9,6 +9,7 @@ Created on Fri Mar  5 12:09:12 2021
 import NetworkGeneration as ng
 from matplotlib import pyplot as plt
 import time
+import numpy as np
 
 '''
 This code will be used to test and analyse data from the TN_model_generate function
@@ -44,26 +45,29 @@ def analisar(energy_list, bins): #N=number of bins
         bin_energies=[]
         for energy in energy_list:
             if energy>=ii and energy<=ie:
-                density+=1
+                density+=1/len(energy_list)
                 bin_energies.append(energy)
-                
-        densities.append(density)
-        print(bin_energies)
-        average_energy=sum(bin_energies)/len(bin_energies)
-        bins_list.append(average_energy)
-        ii=ie
-        ie=ii+interval
+        
+        if len(bin_energies)!=0:        
+            densities.append(density)
+            #print(bin_energies)
+            average_energy=sum(bin_energies)/len(bin_energies)
+            bins_list.append(average_energy)
+            ii=ie
+            ie=ii+interval
     
     #plt.scatter(energy_list, [1 for i in range(len(energy_list))], marker='.')
     plt.scatter(bins_list, densities)
+    plt.xscale('log')
+    plt.yscale('log')
     plt.xlabel('\u03B5')
     plt.ylabel('P(\u03B5)')
     plt.show()
     
 if __name__=='__main__':
     t0=time.time()
-    energies=simular(150, 1, 1, 200)
-    analisar(energies, 20)
+    energies=simular(150, 2, 1, 1000)
+    analisar(energies, 50)
     print('Execution time:', time.time()-t0)
     
     
