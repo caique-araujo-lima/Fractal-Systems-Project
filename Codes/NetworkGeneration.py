@@ -235,6 +235,8 @@ def print_Geo_Network(nk, title='My Network', save=False):
     
     if save==True:
         plt.savefig('my_network.png')
+        
+    #THIS FUNTION IS STILL NOT WORKING PROPERLY!
 
 #---#---#---#---#---#---#---#---#---#---#---#---#---#---#---#---#---#---#---#---#
 
@@ -255,6 +257,22 @@ class exponential(rv_continuous):
         return eta/(w0*math.gamma(1/eta))*np.exp(-(x/w0)**eta)
     
 stretched_exponential=exponential(name='stretched_exponential', a=0)
+
+a, b=3, 1
+
+class exponential2(rv_continuous):
+    '''
+    This is just another custom probability distribution (also continuous) based
+    on an idea prof. Tsallis gave to me. Since I wasn't able to integrate the 
+    distribution exp(a/w-bw) analytically to find the normalization factor, I used
+    Wolfram Mathematica to numerically integrate and find this factor. If, however,
+    you know how to solve this integral analytically, please contact me.
+    '''   
+    def _pdf(self, x): 
+        
+        return (1/2.71386)*np.exp(a/x-b*x) 
+    
+stretched_exponential2=exponential2(name='stretched_exponential2', a=1)
    
 def TN_model_generate(alpha_A, alpha_G, N):
     
@@ -310,29 +328,6 @@ def TN_model_generate(alpha_A, alpha_G, N):
                 nodei.weight+=edgeij_weight/2
             
             connection.weight+=edgeij_weight/2
-        
-        #qsum=0 #denominador do fator de normalizaçao da probabilidade Pi_{ij}
-        
-        #for j in range(i):
-            #qsum+=nk.nodes[j].weight/nk.euclid_distance(nk.nodes[i], nk.nodes[j])
-            
-        #q=1/qsum #fator de normalização
-        
-        #c=0 #counter, to garantee no node will be linkless
-        
-        #for j in range(i):
-         #   if q*nk.nodes[j].weight/nk.euclid_distance(nk.nodes[i], nk.nodes[j])<random.random() or (j==i-1 and c==0):
-         #       edgeij_weight=stretched_exponential.rvs()
-         #       nk.add_edge(nk.nodes[i], nk.nodes[j], edgeij_weight)
-         #       
-         #       if nodei.weight==1:
-         #           nodei.weight=edgeij_weight/2
-         #           
-         #       else:
-         #           nodei.weight+=edgeij_weight/2
-         #           
-         #       nk.nodes[j].weight+=edgeij_weight/2
-         #       c+=1
                 
         for node in nk.nodes:
             node.update_weight(nk.edges_weights)

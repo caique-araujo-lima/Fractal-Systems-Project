@@ -10,6 +10,7 @@ import NetworkGeneration as ng
 from matplotlib import pyplot as plt
 import time
 import numpy as np
+from scipy.optimize import curve_fit
 
 '''
 This code will be used to test and analyse data from the TN_model_generate function
@@ -28,36 +29,41 @@ def simular(n, alpha_A, alpha_G, N):
     for i in range(n):
         nk=ng.TN_model_generate(alpha_A, alpha_G, N)
         energies+=[node.weight for node in nk.nodes]
-        print('Simulation ', i+1, ' of ', n, ' is complete!')
+        print('Simulation', i+1, 'of', n, 'is complete!')
         
     return energies
 
-def analisar(energy_list, bins): #N=number of bins
+def analisar(energy_list, bins, q_fit=False): 
     
-    densities=[]
-    bins_list=[]
+    #REVIEW AND FIX THIS PART OF THE CODE!¨
+    
     start, finish=min(energy_list), max(energy_list)
-    interval=(finish-start)/bins
-    ii, ie=start, start+interval
-    
-    for i in range(bins):
-        density=0
-        bin_energies=[]
-        for energy in energy_list:
-            if energy>=ii and energy<=ie:
-                density+=1/len(energy_list)
-                bin_energies.append(energy)
+    bins_list=list(np.logspace(np.log(start), np.log(finish), num=bins))
+    hist, edges=np.histogram(energy_list, bins=bins_list, density=True)
+    hist_list=list(hist)
+    hist_list.append(1/len(energy_list))
+            
+    if q_fit==True:
         
-        if len(bin_energies)!=0:        
-            densities.append(density)
-            #print(bin_energies)
-            average_energy=sum(bin_energies)/len(bin_energies)
-            bins_list.append(average_energy)
-            ii=ie
-            ie=ii+interval
+        def q_dist(x, q, bq, Z):
+            
+            return 1/Z*(1-bq*(1-q)*x)**(1/(1-q))
+        
+        parameters, cov_matrix=curve_fit(q_dist, bins_list, hist_list)
+        q=parameters[0]
+        bq=parameters[1]
+        Z=parameters[2]
     
-    #plt.scatter(energy_list, [1 for i in range(len(energy_list))], marker='.')
-    plt.scatter(bins_list, densities)
+    print(len(bins_list), len(hist_list))
+    plt.scatter(bins_list, hist_list, c='k')
+    if q_fit==True:
+        plt.plot(bins_list, [1/Z*(1-bq*(1-q)*x)**(1/(1-q)) for x in bins_list])
+        print('q=', q, ' & \u03B2=', bq)
+        print('Covariance Matrix:')
+        print(cov_matrix)
+        
+    plt.xlim((0.000005, 20))
+    plt.ylim((0.000008, 10))
     plt.xscale('log')
     plt.yscale('log')
     plt.xlabel('\u03B5')
@@ -66,8 +72,8 @@ def analisar(energy_list, bins): #N=number of bins
     
 if __name__=='__main__':
     t0=time.time()
-    energies=simular(150, 2, 1, 1000)
-    analisar(energies, 50)
+    energies=simular(400, 2, 1, 1000)
+    analisar(energies, 100, q_fit=True)
     print('Execution time:', time.time()-t0)
     
     
