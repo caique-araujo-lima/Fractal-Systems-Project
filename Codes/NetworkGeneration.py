@@ -203,7 +203,7 @@ class Geo_Network:
         
         for node in self.nodes:
             xsum+=node.weight*node.x
-            ysum+=node.y*node.weight
+            ysum+=node.weight*node.y
             weight_sum+=node.weight
             
         self.center_mass=(xsum/weight_sum, ysum/weight_sum)      
@@ -258,7 +258,7 @@ class exponential(rv_continuous):
     
 stretched_exponential=exponential(name='stretched_exponential', a=0)
 
-a, b=3, 1
+a, b=1, 2
 
 class exponential2(rv_continuous):
     '''
@@ -270,9 +270,17 @@ class exponential2(rv_continuous):
     '''   
     def _pdf(self, x): 
         
-        return (1/2.71386)*np.exp(a/x-b*x) 
+        return (1/227.446)*np.exp(a/x-b*x) 
     
-stretched_exponential2=exponential2(name='stretched_exponential2', a=1)
+stretched_exponential2=exponential2(name='stretched_exponential2', a=0.1)
+
+class alpha_G_prob(rv_continuous):
+    
+    def _pdf(self, x, alpha_G, d):
+        
+        return (d+alpha_G-1)*(1/x**(d+alpha_G))
+    
+alpha_dist=alpha_G_prob(name='alpha_dist', a=1)
    
 def TN_model_generate(alpha_A, alpha_G, N):
     
@@ -290,7 +298,7 @@ def TN_model_generate(alpha_A, alpha_G, N):
     nk.add_node(node1)
     nk.update_center()
     
-    r=random.paretovariate(1+alpha_G) #take a look at the pareto variate prob
+    r=alpha_dist.rvs(alpha_G, 2) #take a look at the pareto variate prob
     #distribution to understand why I'm using it, I'm also assuming the module
     #uses xm=1 to be compatible with the r>=1 of the article.
     o=random.uniform(0, 2*np.pi) #Here I'm randomly choosing the angular position
@@ -308,7 +316,7 @@ def TN_model_generate(alpha_A, alpha_G, N):
     nk.update_center()
     
     for i in range(2,N):
-        r=random.paretovariate(1+alpha_G)
+        r=alpha_dist.rvs(alpha_G, 2)
         o=random.uniform(0, 2*np.pi) 
         nodei_x=nk.center_mass[0]+r*np.cos(o) 
         nodei_y=nk.center_mass[1]+r*np.sin(o) 
@@ -332,6 +340,8 @@ def TN_model_generate(alpha_A, alpha_G, N):
         for node in nk.nodes:
             node.update_weight(nk.edges_weights)
                 
+            
+        nk.update_center()
         #print('Iteration', i+1, 'is complete!')
     
     return nk
@@ -340,6 +350,5 @@ def TN_model_generate(alpha_A, alpha_G, N):
 
 if __name__=='__main__':
     t0=time.time()
-    TN_network=TN_model_generate(1, 1, 100)
-    print_Geo_Network(TN_network)
+    hubs_generate(0.5, 2, 3, draw=True)
     print('Time of execution:', time.time()-t0)

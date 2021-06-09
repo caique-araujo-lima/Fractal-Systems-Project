@@ -38,7 +38,7 @@ def simular(n, alpha_A, alpha_G, N):
     for i in range(n):
         p=pool.apply_async(ng.TN_model_generate, (alpha_A, alpha_G, N))
         pool_list.append(p)
-        print('Simulation', 100*len(pool_list)/n, '% completed!')
+        #print('Simulation', 100*len(pool_list)/n, '% completed!')
             
     networks=[p.get() for p in pool_list]
     
@@ -72,7 +72,7 @@ def analisar(energy_list, bins, q_fit=False):
     plt.scatter(bins_list, hist_list, c='k')
     if q_fit==True:
         plt.plot(bins_list, [1/Z*(1-bq*(1-q)*x)**(1/(1-q)) for x in bins_list])
-        print('q=', q, ' & \u03B2=', bq)
+        print('Z=', Z, ', q=', q, ' & \u03B2=', bq)
         print('Covariance Matrix:')
         print(cov_matrix)
         

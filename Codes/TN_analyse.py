@@ -40,30 +40,36 @@ def analisar(energy_list, bins, q_fit=False):
     start, finish=min(energy_list), max(energy_list)
     bins_list=list(np.logspace(np.log(start), np.log(finish), num=bins))
     hist, edges=np.histogram(energy_list, bins=bins_list, density=True)
-    hist_list=list(hist)
-    hist_list.append(1/len(energy_list))
-            
+    hist_list, edges_list=list(hist), list(edges)
+    
+    bins_midlist=[]
+    for i in range(len(edges_list)-1):
+        mid=(edges_list[i+1]-edges_list[i])/2    
+        bins_midlist.append(mid)
+        
     if q_fit==True:
         
         def q_dist(x, q, bq, Z):
             
             return 1/Z*(1-bq*(1-q)*x)**(1/(1-q))
         
-        parameters, cov_matrix=curve_fit(q_dist, bins_list, hist_list)
+        parameters, cov_matrix=curve_fit(q_dist, bins_midlist, hist_list)
         q=parameters[0]
         bq=parameters[1]
         Z=parameters[2]
     
-    print(len(bins_list), len(hist_list))
-    plt.scatter(bins_list, hist_list, c='k')
+    print(len(bins_midlist), len(hist_list))
+    plt.scatter(bins_midlist, hist_list, c='k', marker='.')
     if q_fit==True:
-        plt.plot(bins_list, [1/Z*(1-bq*(1-q)*x)**(1/(1-q)) for x in bins_list])
-        print('q=', q, ' & \u03B2=', bq)
+        plt.plot(bins_midlist, [1/Z*(1-bq*(1-q)*x)**(1/(1-q)) for x in bins_midlist])
+        print('Z=', Z, ', q=', q, ' & \u03B2=', bq)
         print('Covariance Matrix:')
         print(cov_matrix)
-        
-    plt.xlim((0.000005, 20))
-    plt.ylim((0.000008, 10))
+    
+    q, bq, Z=1.05, 8.1, 0.95
+    plt.plot(bins_list, [1/Z*(1-bq*(1-q)*x)**(1/(1-q)) for x in bins_list])    
+    plt.xlim((0.000001, 30))
+    plt.ylim((0.000001, 20))
     plt.xscale('log')
     plt.yscale('log')
     plt.xlabel('\u03B5')
@@ -72,8 +78,10 @@ def analisar(energy_list, bins, q_fit=False):
     
 if __name__=='__main__':
     t0=time.time()
-    energies=simular(400, 2, 1, 1000)
-    analisar(energies, 100, q_fit=True)
+    energies=simular(100, 2, 1, 100)
+    analisar(energies, 100, q_fit=False)
     print('Execution time:', time.time()-t0)
+    
+#pedir para mostrar o q-exp esperado
     
     

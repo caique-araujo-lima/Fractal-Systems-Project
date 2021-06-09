@@ -86,6 +86,7 @@ class Person():
         
         if self.days_out_home==5: #if they spend a lot of time out of their home city
             self.travel(self.home_city) #they go back home
+            self.days_out_home=0
         
         if self.current_city!=self.home_city:
             self.days_out_home+=1
@@ -129,8 +130,8 @@ class City():
             if person.infected==True: #the infected ones will test to see if they will infect someone
                 
                 for contact in range(avg_contact): #for each person they get contact with
-                    rindex=random.randint(0, self.population-1) #random index
-                    rpatient=self.citizens[rindex] #random patient
+                    rindex=random.randint(0, len(self.people_in)-1) #random index
+                    rpatient=self.people_in[rindex] #random patient
                     if rpatient.susceptible==True and random.random()<infection_prob:
                         
                         rpatient.get_infected() #there is a random chance of that contact becoming infected
